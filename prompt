@@ -1,0 +1,59 @@
+Voici un prompt final détaillé et optimisé que tu peux utiliser pour générer le code final de ton indicateur MQL5 avec toutes les améliorations et personnalisations discutées. Ce prompt est conçu pour être clair et précis, en tenant compte des fonctionnalités initiales (tableau de pourcentages moyens et tendance) ainsi que des paramètres supplémentaires proposés (personnalisation visuelle, multiples périodes, formules alternatives, tendances multi-timeframes, optimisation, alertes).
+
+---
+
+### **Prompt final pour générer le code**
+
+**Instruction :**
+
+Je suis Grok 3, créé par xAI. Génère un code MQL5 pour un indicateur personnalisé nommé "PercentDiffEnhanced" avec les fonctionnalités et paramètres suivants. Le code doit être complet, bien commenté, et prêt à être compilé dans MetaTrader 5. Assure-toi que le code gère les erreurs et optimise les performances.
+
+**Fonctionnalités principales :**
+- Afficher un tableau sur le graphique avec les pourcentages moyens de la différence entre le prix le plus haut (high) et le plus bas (low) pour plusieurs périodes définies par l'utilisateur, calculés sur un timeframe de bougies choisi.
+- Indiquer la tendance (hausse, baisse, neutre) basée sur la dernière bougie d’un timeframe sélectionné.
+- Mettre à jour le tableau uniquement à l’ouverture d’une nouvelle bougie pour optimiser les performances.
+
+**Paramètres d’entrée :**
+1. **Timeframe des bougies** (ENUM_TIMEFRAMES, défaut : PERIOD_D1) : Timeframe utilisé pour calculer les pourcentages moyens.
+2. **Timeframe de la tendance** (ENUM_TIMEFRAMES, défaut : PERIOD_H1) : Timeframe pour déterminer la tendance.
+3. **Périodes personnalisables** (jusqu’à 5 périodes) :
+   - Unit_period_X (enum UNIT : YEARS, MONTHS, DAYS, HOURS, MINUTES, défaut : YEARS pour P1, MONTHS pour P2, DAYS pour P3, etc.).
+   - Number_period_X (int, défaut : 5 pour P1, 12 pour P2, 365 pour P3, 30 pour P4, 7 pour P5).
+4. **Formule de calcul** (enum FORMULA : BASED_ON_LOW, BASED_ON_OPEN, BASED_ON_CLOSE, défaut : BASED_ON_LOW) : Choisir la base pour le calcul du pourcentage (ex. (high - low) / low * 100).
+5. **Couleur du texte** (color, défaut : clrWhite) : Couleur des labels du tableau.
+6. **Position du tableau** (enum POSITION : TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, défaut : TOP_LEFT) : Emplacement du tableau.
+7. **Taille de la police** (int, défaut : 10) : Taille du texte dans le tableau.
+8. **Affichage des tendances multi-timeframes** (bool, défaut : false) : Activer l’affichage des tendances pour H1, H4, D1.
+9. **Seuil d’alerte** (double, défaut : 2.0) : Pourcentage seuil déclenchant une alerte visuelle (changement de couleur de la ligne).
+10. **Mise à jour par bougie** (bool, défaut : true) : Limiter les mises à jour à l’ouverture d’une nouvelle bougie.
+
+**Fonctionnalités spécifiques :**
+- Calculer le pourcentage moyen avec la formule choisie pour chaque période définie.
+- Afficher la tendance avec des flèches (↑ pour hausse, ↓ pour baisse, → pour neutre) et la couleur correspondante (vert, rouge, gris).
+- Si l’option multi-timeframes est activée, afficher les tendances pour H1, H4, D1 sous le tableau principal.
+- Si le pourcentage dépasse le seuil d’alerte, colorier la ligne correspondante en rouge.
+- Utiliser des objets graphiques (OBJ_LABEL) pour le tableau, avec nettoyage dans OnDeinit().
+- Gérer les erreurs (données manquantes, divisions par zéro) avec des messages dans le journal.
+
+**Exemple d’affichage attendu :**
+```
+Période       Pourcentage moyen
+5 ans         2.45% (vert si < seuil, rouge si > seuil)
+12 mois       1.89%
+365 jours     1.92%
+Tendance (H1) : ↑ (vert)
+[H1: ↑, H4: ↓, D1: →] (si multi-timeframes activé)
+```
+
+**Instructions supplémentaires :**
+- Assure-toi que le code est modulaire avec des fonctions séparées (ex. CalculateStartDate, CalculateAveragePercentage, GetTrend).
+- Inclure des commentaires expliquant chaque section importante.
+- Optimiser pour éviter une surcharge (limite de 50 000 bougies par période si nécessaire).
+- Le code doit être prêt à être copié dans l’éditeur MQL5 et compilé sans modification.
+
+---
+
+### **Explication du prompt**
+Ce prompt regroupe toutes les fonctionnalités discutées, y compris les améliorations proposées (personnalisation visuelle, calculs alternatifs, tendances multi-timeframes, alertes, optimisation). Il est structuré pour guider l’IA ou un développeur vers un résultat clair et fonctionnel. Si tu utilises ce prompt avec un outil de génération de code (comme moi ou une autre IA), tu devrais obtenir un code MQL5 complet et prêt à l’emploi.
+
+Si tu veux tester ce prompt ou ajuster quelque chose avant de générer le code, dis-le-moi, et je peux le faire pour toi !
