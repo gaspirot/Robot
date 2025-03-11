@@ -1,0 +1,427 @@
+//+------------------------------------------------------------------+
+//|                                                TechnicalRatings.mq5 |
+//|                        Copyright 2025, Grok (adapté pour vous)   |
+//|                                                                  |
+//+------------------------------------------------------------------+
+#property copyright "Grok (adapté pour vous)"
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property indicator_separate_window
+#property indicator_buffers 2
+#property indicator_plots   1
+//--- Plot Rating
+#property indicator_label1  "Technical Rating"
+#property indicator_type1   DRAW_COLOR_HISTOGRAM
+#property indicator_color1  clrGray, clrBlue, clrRed
+#property indicator_style1  STYLE_SOLID
+#property indicator_width1  2
+
+//--- Input parameters
+input int SMA10_Period = 10;   // Période SMA 10
+input int SMA20_Period = 20;   // Période SMA 20
+input int SMA30_Period = 30;   // Période SMA 30
+input int SMA50_Period = 50;   // Période SMA 50
+input int SMA100_Period = 100; // Période SMA 100
+input int SMA200_Period = 200; // Période SMA 200
+input int EMA10_Period = 10;   // Période EMA 10
+input int EMA20_Period = 20;   // Période EMA 20
+input int EMA30_Period = 30;   // Période EMA 30
+input int EMA50_Period = 50;   // Période EMA 50
+input int EMA100_Period = 100; // Période EMA 100
+input int EMA200_Period = 200; // Période EMA 200
+input int VWMA_Period = 20;    // Période VWMA
+input int HullMA_Period = 9;   // Période HullMA
+input int Ichimoku_Tenkan = 9; // Période Tenkan-sen
+input int Ichimoku_Kijun = 26; // Période Kijun-sen
+input int Ichimoku_Senkou = 52;// Période Senkou Span B
+input int RSI_Period = 14;     // Période RSI
+input int Stoch_K = 14;        // Période Stochastique %K
+input int Stoch_D = 3;         // Période Stochastique %D
+input int Stoch_Slow = 3;      // Ralentissement Stochastique
+input int CCI_Period = 20;     // Période CCI
+input int ADX_Period = 14;     // Période ADX
+input int Momentum_Period = 10;// Période Momentum
+input int MACD_Fast = 12;      // Période MACD Fast EMA
+input int MACD_Slow = 26;      // Période MACD Slow EMA
+input int MACD_Signal = 9;     // Période MACD Signal
+input int StochRSI_K = 3;      // Période Stoch RSI %K
+input int StochRSI_D = 3;      // Période Stoch RSI %D
+input int StochRSI_RSI = 14;   // Période Stoch RSI RSI
+input int Williams_Period = 14;// Période Williams %R
+input int BullsBears_Period = 13; // Période Bulls/Bears Power
+input int UO_Short = 7;        // Période UO courte
+input int UO_Medium = 14;      // Période UO moyenne
+input int UO_Long = 28;        // Période UO longue
+
+//--- Indicator buffers
+double RatingBuffer[];
+double ColorBuffer[];
+
+//--- Handles for indicators
+int handle_sma10, handle_sma20, handle_sma30, handle_sma50, handle_sma100, handle_sma200;
+int handle_ema10, handle_ema20, handle_ema30, handle_ema50, handle_ema100, handle_ema200;
+int handle_vwma, handle_ichimoku, handle_rsi, handle_stoch, handle_cci, handle_adx;
+int handle_momentum, handle_macd, handle_williams, handle_bulls, handle_bears;
+
+//--- Arrays for custom indicators
+double hullma[], rsi_vals[], stochrsi_k[], stochrsi_d[], uo[], temp[];
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   SetIndexBuffer(0, RatingBuffer, INDICATOR_DATA);
+   SetIndexBuffer(1, ColorBuffer, INDICATOR_COLOR_INDEX);
+
+   // Initialize handles
+   handle_sma10 = iMA(NULL, 0, SMA10_Period, 0, MODE_SMA, PRICE_CLOSE);
+   handle_sma20 = iMA(NULL, 0, SMA20_Period, 0, MODE_SMA, PRICE_CLOSE);
+   handle_sma30 = iMA(NULL, 0, SMA30_Period, 0, MODE_SMA, PRICE_CLOSE);
+   handle_sma50 = iMA(NULL, 0, SMA50_Period, 0, MODE_SMA, PRICE_CLOSE);
+   handle_sma100 = iMA(NULL, 0, SMA100_Period, 0, MODE_SMA, PRICE_CLOSE);
+   handle_sma200 = iMA(NULL, 0, SMA200_Period, 0, MODE_SMA, PRICE_CLOSE);
+   handle_ema10 = iMA(NULL, 0, EMA10_Period, 0, MODE_EMA, PRICE_CLOSE);
+   handle_ema20 = iMA(NULL, 0, EMA20_Period, 0, MODE_EMA, PRICE_CLOSE);
+   handle_ema30 = iMA(NULL, 0, EMA30_Period, 0, MODE_EMA, PRICE_CLOSE);
+   handle_ema50 = iMA(NULL, 0, EMA50_Period, 0, MODE_EMA, PRICE_CLOSE);
+   handle_ema100 = iMA(NULL, 0, EMA100_Period, 0, MODE_EMA, PRICE_CLOSE);
+   handle_ema200 = iMA(NULL, 0, EMA200_Period, 0, MODE_EMA, PRICE_CLOSE);
+   handle_vwma = iMA(NULL, 0, VWMA_Period, 0, MODE_SMA, PRICE_CLOSE); // Approximation
+   handle_ichimoku = iIchimoku(NULL, 0, Ichimoku_Tenkan, Ichimoku_Kijun, Ichimoku_Senkou);
+   handle_rsi = iRSI(NULL, 0, RSI_Period, PRICE_CLOSE);
+   handle_stoch = iStochastic(NULL, 0, Stoch_K, Stoch_D, Stoch_Slow, MODE_SMA, STO_LOWHIGH);
+   handle_cci = iCCI(NULL, 0, CCI_Period, PRICE_TYPICAL);
+   handle_adx = iADX(NULL, 0, ADX_Period);
+   handle_momentum = iMomentum(NULL, 0, Momentum_Period, PRICE_CLOSE);
+   handle_macd = iMACD(NULL, 0, MACD_Fast, MACD_Slow, MACD_Signal, PRICE_CLOSE);
+   handle_williams = iWPR(NULL, 0, Williams_Period);
+   handle_bulls = iBullsPower(NULL, 0, BullsBears_Period);
+   handle_bears = iBearsPower(NULL, 0, BullsBears_Period);
+
+   // Resize arrays
+   ArraySetAsSeries(hullma, true);
+   ArraySetAsSeries(rsi_vals, true);
+   ArraySetAsSeries(stochrsi_k, true);
+   ArraySetAsSeries(stochrsi_d, true);
+   ArraySetAsSeries(uo, true);
+   ArraySetAsSeries(temp, true);
+
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| WMA function                                                     |
+//+------------------------------------------------------------------+
+double WMA(int period, const double &price[], int index)
+{
+   double sum = 0.0, weight_sum = 0.0;
+   for(int i = 0; i < period && index - i >= 0; i++)
+   {
+      double weight = period - i;
+      sum += price[index - i] * weight;
+      weight_sum += weight;
+   }
+   return (weight_sum > 0) ? sum / weight_sum : EMPTY_VALUE;
+}
+
+//+------------------------------------------------------------------+
+//| HullMA function                                                  |
+//+------------------------------------------------------------------+
+double HullMA(int period, const double &price[], int index)
+{
+   int n2 = (int)MathFloor(period / 2.0);
+   int sqrt_n = (int)MathFloor(MathSqrt(period));
+   if(index < period - 1) return EMPTY_VALUE;
+
+   double wma_n2 = WMA(n2, price, index);
+   double wma_n = WMA(period, price, index);
+   if(wma_n2 == EMPTY_VALUE || wma_n == EMPTY_VALUE) return EMPTY_VALUE;
+
+   temp[index] = 2 * wma_n2 - wma_n;
+   return WMA(sqrt_n, temp, index);
+}
+
+//+------------------------------------------------------------------+
+//| Stochastic RSI function                                          |
+//+------------------------------------------------------------------+
+void CalculateStochRSI(int rates_total, int prev_calculated, const double &price[])
+{
+   for(int i = prev_calculated; i < rates_total; i++)
+   {
+      double rsi_value[];
+      ArraySetAsSeries(rsi_value, true);
+      if(CopyBuffer(handle_rsi, 0, i, 1, rsi_value) > 0)
+         rsi_vals[i] = rsi_value[0];
+      else
+         rsi_vals[i] = EMPTY_VALUE;
+
+      if(i >= StochRSI_RSI - 1)
+      {
+         double min_rsi = rsi_vals[i], max_rsi = rsi_vals[i];
+         for(int j = 1; j < StochRSI_RSI && i - j >= 0; j++)
+         {
+            min_rsi = MathMin(min_rsi, rsi_vals[i - j]);
+            max_rsi = MathMax(max_rsi, rsi_vals[i - j]);
+         }
+         double range = max_rsi - min_rsi;
+         stochrsi_k[i] = (range > 0) ? 100 * (rsi_vals[i] - min_rsi) / range : 50;
+         if(i >= StochRSI_K - 1)
+         {
+            double sum_k = 0;
+            for(int k = 0; k < StochRSI_K && i - k >= 0; k++)
+               sum_k += stochrsi_k[i - k];
+            stochrsi_d[i] = sum_k / StochRSI_K;
+         }
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Ultimate Oscillator function                                     |
+//+------------------------------------------------------------------+
+double UltimateOscillator(int index, const double &high[], const double &low[], const double &close[])
+{
+   if(index < UO_Long - 1) return EMPTY_VALUE;
+
+   double bp_sum7 = 0, tr_sum7 = 0, bp_sum14 = 0, tr_sum14 = 0, bp_sum28 = 0, tr_sum28 = 0;
+   for(int i = 0; i < UO_Short && index - i >= 0; i++)
+   {
+      double bp = close[index - i] - MathMin(low[index - i], i > 0 ? close[index - i - 1] : low[index - i]);
+      double tr = MathMax(high[index - i], i > 0 ? close[index - i - 1] : high[index - i]) - MathMin(low[index - i], i > 0 ? close[index - i - 1] : low[index - i]);
+      bp_sum7 += bp;
+      tr_sum7 += tr;
+   }
+   for(int i = 0; i < UO_Medium && index - i >= 0; i++)
+   {
+      double bp = close[index - i] - MathMin(low[index - i], i > 0 ? close[index - i - 1] : low[index - i]);
+      double tr = MathMax(high[index - i], i > 0 ? close[index - i - 1] : high[index - i]) - MathMin(low[index - i], i > 0 ? close[index - i - 1] : low[index - i]);
+      bp_sum14 += bp;
+      tr_sum14 += tr;
+   }
+   for(int i = 0; i < UO_Long && index - i >= 0; i++)
+   {
+      double bp = close[index - i] - MathMin(low[index - i], i > 0 ? close[index - i - 1] : low[index - i]);
+      double tr = MathMax(high[index - i], i > 0 ? close[index - i - 1] : high[index - i]) - MathMin(low[index - i], i > 0 ? close[index - i - 1] : low[index - i]);
+      bp_sum28 += bp;
+      tr_sum28 += tr;
+   }
+
+   double avg7 = (tr_sum7 > 0) ? bp_sum7 / tr_sum7 : 0;
+   double avg14 = (tr_sum14 > 0) ? bp_sum14 / tr_sum14 : 0;
+   double avg28 = (tr_sum28 > 0) ? bp_sum28 / tr_sum28 : 0;
+   return 100 * (4 * avg7 + 2 * avg14 + avg28) / 7;
+}
+
+//+------------------------------------------------------------------+
+//| Helper function to get indicator value                           |
+//+------------------------------------------------------------------+
+double GetIndicatorValue(int handle, int buffer, int shift)
+{
+   double value[];
+   ArraySetAsSeries(value, true);
+   if(CopyBuffer(handle, buffer, shift, 1, value) > 0) return value[0];
+   return EMPTY_VALUE;
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   ArraySetAsSeries(RatingBuffer, true);
+   ArraySetAsSeries(ColorBuffer, true);
+   ArraySetAsSeries(hullma, true);
+   ArraySetAsSeries(rsi_vals, true);
+   ArraySetAsSeries(stochrsi_k, true);
+   ArraySetAsSeries(stochrsi_d, true);
+   ArraySetAsSeries(uo, true);
+   ArraySetAsSeries(temp, true);
+
+   int start = prev_calculated > 0 ? prev_calculated - 1 : 0;
+   for(int i = start; i < rates_total && !IsStopped(); i++)
+   {
+      // Group 1: Moving Averages and Related Indicators
+      double sma10 = GetIndicatorValue(handle_sma10, 0, i);
+      double sma20 = GetIndicatorValue(handle_sma20, 0, i);
+      double sma30 = GetIndicatorValue(handle_sma30, 0, i);
+      double sma50 = GetIndicatorValue(handle_sma50, 0, i);
+      double sma100 = GetIndicatorValue(handle_sma100, 0, i);
+      double sma200 = GetIndicatorValue(handle_sma200, 0, i);
+      double ema10 = GetIndicatorValue(handle_ema10, 0, i);
+      double ema20 = GetIndicatorValue(handle_ema20, 0, i);
+      double ema30 = GetIndicatorValue(handle_ema30, 0, i);
+      double ema50 = GetIndicatorValue(handle_ema50, 0, i);
+      double ema100 = GetIndicatorValue(handle_ema100, 0, i);
+      double ema200 = GetIndicatorValue(handle_ema200, 0, i);
+      double vwma = GetIndicatorValue(handle_vwma, 0, i); // Approximation
+      hullma[i] = HullMA(HullMA_Period, close, i);
+      double tenkan = GetIndicatorValue(handle_ichimoku, 0, i);
+      double kijun = GetIndicatorValue(handle_ichimoku, 1, i);
+      double senkou_a = (i + 26 < rates_total) ? GetIndicatorValue(handle_ichimoku, 2, i + 26) : EMPTY_VALUE;
+      double senkou_b = (i + 26 < rates_total) ? GetIndicatorValue(handle_ichimoku, 3, i + 26) : EMPTY_VALUE;
+
+      // Group 2: Oscillators
+      double rsi = GetIndicatorValue(handle_rsi, 0, i);
+      double rsi_prev = (i > 0) ? GetIndicatorValue(handle_rsi, 0, i - 1) : EMPTY_VALUE;
+      double stoch_k = GetIndicatorValue(handle_stoch, 0, i);
+      double stoch_d = GetIndicatorValue(handle_stoch, 1, i);
+      double cci = GetIndicatorValue(handle_cci, 0, i);
+      double cci_prev = (i > 0) ? GetIndicatorValue(handle_cci, 0, i - 1) : EMPTY_VALUE;
+      double adx = GetIndicatorValue(handle_adx, 0, i);
+      double adx_prev = (i > 0) ? GetIndicatorValue(handle_adx, 0, i - 1) : EMPTY_VALUE;
+      double plus_di = GetIndicatorValue(handle_adx, 1, i);
+      double minus_di = GetIndicatorValue(handle_adx, 2, i);
+      double ao = iAO(NULL, 0);
+      double ao_prev = (i > 0) ? iAO(NULL, 0) : EMPTY_VALUE;
+      double momentum = GetIndicatorValue(handle_momentum, 0, i);
+      double momentum_prev = (i > 0) ? GetIndicatorValue(handle_momentum, 0, i - 1) : EMPTY_VALUE;
+      double macd_main = GetIndicatorValue(handle_macd, 0, i);
+      double macd_signal = GetIndicatorValue(handle_macd, 1, i);
+      CalculateStochRSI(rates_total, prev_calculated, close);
+      double williams = GetIndicatorValue(handle_williams, 0, i);
+      double williams_prev = (i > 0) ? GetIndicatorValue(handle_williams, 0, i - 1) : EMPTY_VALUE;
+      double bulls = GetIndicatorValue(handle_bulls, 0, i);
+      double bears = GetIndicatorValue(handle_bears, 0, i);
+      double bears_prev = (i > 0) ? GetIndicatorValue(handle_bears, 0, i - 1) : EMPTY_VALUE;
+      double bulls_prev = (i > 0) ? GetIndicatorValue(handle_bulls, 0, i - 1) : EMPTY_VALUE;
+      uo[i] = UltimateOscillator(i, high, low, close);
+
+      // Group 1 Ratings
+      double group1_rating = 0;
+      int group1_count = 0;
+      if(sma10 != EMPTY_VALUE) { group1_rating += (sma10 < close[i]) ? 1 : (sma10 > close[i]) ? -1 : 0; group1_count++; }
+      if(sma20 != EMPTY_VALUE) { group1_rating += (sma20 < close[i]) ? 1 : (sma20 > close[i]) ? -1 : 0; group1_count++; }
+      if(sma30 != EMPTY_VALUE) { group1_rating += (sma30 < close[i]) ? 1 : (sma30 > close[i]) ? -1 : 0; group1_count++; }
+      if(sma50 != EMPTY_VALUE) { group1_rating += (sma50 < close[i]) ? 1 : (sma50 > close[i]) ? -1 : 0; group1_count++; }
+      if(sma100 != EMPTY_VALUE) { group1_rating += (sma100 < close[i]) ? 1 : (sma100 > close[i]) ? -1 : 0; group1_count++; }
+      if(sma200 != EMPTY_VALUE) { group1_rating += (sma200 < close[i]) ? 1 : (sma200 > close[i]) ? -1 : 0; group1_count++; }
+      if(ema10 != EMPTY_VALUE) { group1_rating += (ema10 < close[i]) ? 1 : (ema10 > close[i]) ? -1 : 0; group1_count++; }
+      if(ema20 != EMPTY_VALUE) { group1_rating += (ema20 < close[i]) ? 1 : (ema20 > close[i]) ? -1 : 0; group1_count++; }
+      if(ema30 != EMPTY_VALUE) { group1_rating += (ema30 < close[i]) ? 1 : (ema30 > close[i]) ? -1 : 0; group1_count++; }
+      if(ema50 != EMPTY_VALUE) { group1_rating += (ema50 < close[i]) ? 1 : (ema50 > close[i]) ? -1 : 0; group1_count++; }
+      if(ema100 != EMPTY_VALUE) { group1_rating += (ema100 < close[i]) ? 1 : (ema100 > close[i]) ? -1 : 0; group1_count++; }
+      if(ema200 != EMPTY_VALUE) { group1_rating += (ema200 < close[i]) ? 1 : (ema200 > close[i]) ? -1 : 0; group1_count++; }
+      if(vwma != EMPTY_VALUE) { group1_rating += (vwma < close[i]) ? 1 : (vwma > close[i]) ? -1 : 0; group1_count++; }
+      if(hullma[i] != EMPTY_VALUE) { group1_rating += (hullma[i] < close[i]) ? 1 : (hullma[i] > close[i]) ? -1 : 0; group1_count++; }
+      if(senkou_a != EMPTY_VALUE && senkou_b != EMPTY_VALUE && tenkan != EMPTY_VALUE && kijun != EMPTY_VALUE)
+      {
+         bool buy_ichimoku = (senkou_a > senkou_b && kijun > senkou_a && tenkan > kijun && close[i] > tenkan);
+         bool sell_ichimoku = (senkou_a < senkou_b && kijun < senkou_a && tenkan < kijun && close[i] < tenkan);
+         group1_rating += buy_ichimoku ? 1 : sell_ichimoku ? -1 : 0;
+         group1_count++;
+      }
+      group1_rating = (group1_count > 0) ? group1_rating / group1_count : 0;
+
+      // Group 2 Ratings
+      double group2_rating = 0;
+      int group2_count = 0;
+      if(rsi != EMPTY_VALUE && rsi_prev != EMPTY_VALUE)
+      {
+         group2_rating += (rsi < 30 && rsi > rsi_prev) ? 1 : (rsi > 70 && rsi < rsi_prev) ? -1 : 0;
+         group2_count++;
+      }
+      if(stoch_k != EMPTY_VALUE && stoch_d != EMPTY_VALUE)
+      {
+         group2_rating += (stoch_k < 20 && stoch_d < 20 && stoch_k > stoch_d) ? 1 : (stoch_k > 80 && stoch_d > 80 && stoch_k < stoch_d) ? -1 : 0;
+         group2_count++;
+      }
+      if(cci != EMPTY_VALUE && cci_prev != EMPTY_VALUE)
+      {
+         group2_rating += (cci < -100 && cci > cci_prev) ? 1 : (cci > 100 && cci < cci_prev) ? -1 : 0;
+         group2_count++;
+      }
+      if(adx != EMPTY_VALUE && adx_prev != EMPTY_VALUE && plus_di != EMPTY_VALUE && minus_di != EMPTY_VALUE)
+      {
+         group2_rating += (plus_di > minus_di && adx > 20 && adx > adx_prev) ? 1 : (plus_di < minus_di && adx > 20 && adx > adx_prev) ? -1 : 0;
+         group2_count++;
+      }
+      if(ao != EMPTY_VALUE && ao_prev != EMPTY_VALUE)
+      {
+         bool saucer_buy = (ao > 0 && ao > ao_prev);
+         bool saucer_sell = (ao < 0 && ao < ao_prev);
+         bool cross_buy = (ao_prev < 0 && ao > 0);
+         bool cross_sell = (ao_prev > 0 && ao < 0);
+         group2_rating += (saucer_buy || cross_buy) ? 1 : (saucer_sell || cross_sell) ? -1 : 0;
+         group2_count++;
+      }
+      if(momentum != EMPTY_VALUE && momentum_prev != EMPTY_VALUE)
+      {
+         group2_rating += (momentum > momentum_prev) ? 1 : (momentum < momentum_prev) ? -1 : 0;
+         group2_count++;
+      }
+      if(macd_main != EMPTY_VALUE && macd_signal != EMPTY_VALUE)
+      {
+         group2_rating += (macd_main > macd_signal) ? 1 : (macd_main < macd_signal) ? -1 : 0;
+         group2_count++;
+      }
+      if(stochrsi_k[i] != 0 && stochrsi_d[i] != 0)
+      {
+         bool uptrend = (i > 0 && close[i] > close[i - 1]);
+         bool downtrend = (i > 0 && close[i] < close[i - 1]);
+         group2_rating += (downtrend && stochrsi_k[i] < 20 && stochrsi_d[i] < 20 && stochrsi_k[i] > stochrsi_d[i]) ? 1 : 
+                          (uptrend && stochrsi_k[i] > 80 && stochrsi_d[i] > 80 && stochrsi_k[i] < stochrsi_d[i]) ? -1 : 0;
+         group2_count++;
+      }
+      if(williams != EMPTY_VALUE && williams_prev != EMPTY_VALUE)
+      {
+         group2_rating += (williams < -80 && williams > williams_prev) ? 1 : (williams > -20 && williams < williams_prev) ? -1 : 0;
+         group2_count++;
+      }
+      if(bulls != EMPTY_VALUE && bears != EMPTY_VALUE && bears_prev != EMPTY_VALUE && bulls_prev != EMPTY_VALUE)
+      {
+         bool uptrend = (i > 0 && close[i] > close[i - 1]);
+         bool downtrend = (i > 0 && close[i] < close[i - 1]);
+         group2_rating += (uptrend && bears < 0 && bears > bears_prev) ? 1 : (downtrend && bulls > 0 && bulls < bulls_prev) ? -1 : 0;
+         group2_count++;
+      }
+      if(uo[i] != EMPTY_VALUE)
+      {
+         group2_rating += (uo[i] > 70) ? 1 : (uo[i] < 30) ? -1 : 0;
+         group2_count++;
+      }
+      group2_rating = (group2_count > 0) ? group2_rating / group2_count : 0;
+
+      // Overall Rating
+      double overall_rating = (group1_rating + group2_rating) / 2.0;
+      RatingBuffer[i] = overall_rating;
+
+      // Color coding
+      if(overall_rating >= -0.1 && overall_rating <= 0.1) ColorBuffer[i] = 0; // Gray
+      else if(overall_rating > 0.1) ColorBuffer[i] = 1; // Blue
+      else if(overall_rating < -0.1) ColorBuffer[i] = 2; // Red
+
+      // Label
+      string label = "Technical Rating: ";
+      if(overall_rating >= -1.0 && overall_rating < -0.5) label += "Strong Sell";
+      else if(overall_rating >= -0.5 && overall_rating < -0.1) label += "Sell";
+      else if(overall_rating >= -0.1 && overall_rating <= 0.1) label += "Neutral";
+      else if(overall_rating > 0.1 && overall_rating <= 0.5) label += "Buy";
+      else if(overall_rating > 0.5 && overall_rating <= 1.0) label += "Strong Buy";
+      ObjectCreate(0, "RatingLabel", OBJ_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, "RatingLabel", OBJPROP_XDISTANCE, 10);
+      ObjectSetInteger(0, "RatingLabel", OBJPROP_YDISTANCE, 10);
+      ObjectSetString(0, "RatingLabel", OBJPROP_TEXT, label);
+      ObjectSetInteger(0, "RatingLabel", OBJPROP_COLOR, 
+                       overall_rating > 0.1 ? clrBlue : overall_rating < -0.1 ? clrRed : clrGray);
+   }
+
+   return(rates_total);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   ObjectDelete(0, "RatingLabel");
+}
